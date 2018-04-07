@@ -18,6 +18,10 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	Queue* new_queue = queue_init(0);
+
+
+	//LECTURA ARCHIVO Y CREACION PROCESOS
 	int PID = 0;
     char *p;
 	FILE* fr = fopen(argv[2], "r");
@@ -51,8 +55,20 @@ int main(int argc, char *argv[])
 	    		}
 	    	}
 	    }
+	    new_queue_insert(new_queue, process);
 	}
 	fclose(fr);
+
+	//PARA PROBAR NEW_QUEUE
+	// Process* actual = new_queue->head;
+	// while (actual){
+	// 	printf("%d\n", actual ->init_time);
+	// 	actual = actual -> next_new;
+	// }
+	// printf("hola\n");
+	// printf("%d\n", new_queue->head->PID);
+	// printf("%d\n", new_queue->tail->PID);
+
 	//
 	// /* Las rutas a los distintos archivos */
 	// char* map_filepath = argv[1];

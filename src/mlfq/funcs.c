@@ -13,7 +13,19 @@ Process* process_init(int PID)
 	process->bursts = bursts_init();
 	process->PID = PID;
 	process->state = 0; //NEW
+	process->next_new = NULL;
+	process->previous_new = NULL;
 	return process;
+}
+
+Queue* queue_init(int state)
+{
+	Queue* queue = malloc(sizeof(Queue));
+	queue->state = state; //0 NEW; 1 READY; 2 RUNNING; 3 FINISHED
+	queue -> count = 0;
+	queue -> head = NULL;
+	queue -> tail = NULL;	
+	return queue;
 }
 //
 
@@ -35,19 +47,60 @@ Bursts* bursts_init()
 }
 //
 void burst_insert(Bursts* bursts, Burst* new){
-	if(bursts -> count == 0)
-	{
+	if(bursts -> count == 0){
 		bursts -> tail = new;
 		bursts -> head = new;
 	}
-	else
-	{
+	else{
 		bursts -> tail -> next_burst = new;            //el siguiente del ultimo actual es new
 		bursts -> tail = new;                                //se agrega new al final
 		bursts -> tail -> next_burst = NULL;
 	}
 	bursts -> count++;	
 }
+
+void new_queue_insert(Queue* queue, Process* process){
+	if(queue -> count == 0){
+		queue -> tail = process;
+		queue -> head = process;
+	}
+	else if (process->init_time < queue->head->init_time){   //si hay que poner new a la cabeza por menor tiempo
+		process -> next_new = queue -> head;
+		queue -> head -> previous_new = process;
+		queue -> head = process;
+	}
+	else{
+
+		Process* actual = queue->head;
+		Process* previous = NULL;
+		while (actual && actual -> init_time <= process->init_time){
+			previous = actual;
+			actual = actual-> next_new;
+		}
+		process -> next_new = actual;
+		process -> previous_new = previous;
+		previous -> next_new = process;
+		if (actual){
+			actual -> previous_new = process;
+		}
+		else{
+			queue -> tail = process;
+		}
+		// for (int i = 0; i < queue->count; i++){
+		// 	if (actual->time > new->time){
+		// 		actual->previous_new->next_new = new; 
+		// 		new->next_new = actual;
+		// 		new->previous_new = actual -> previous_new
+		// 	}
+		// }
+		// //ingresar process por orden de tiempo
+		// bursts -> tail -> next_burst = new;            //el siguiente del ultimo actual es new
+		// bursts -> tail = new;                                //se agrega new al final
+		// bursts -> tail -> next_burst = NULL;
+	}
+	queue -> count++;	
+}
+
 
 //
 // void buscar_vecinos(Image* map, Node* node){
