@@ -15,18 +15,36 @@ Process* process_init(int PID)
 	process->state = 0; //NEW
 	process->next_new = NULL;
 	process->previous_new = NULL;
+	process->next_process = NULL;
+	process->next_finished = NULL;
+	process->processed_time = 0;
+	process->number_CPU = 0;
+	process->number_interruptions = 0;
+	process->turnaround_time = 0;
+    process->response_time = 0;
+    process->waiting_time = 0;
 	return process;
 }
 
-Queue* queue_init(int state)
+Queue* queue_init(int state, int priority)
 {
 	Queue* queue = malloc(sizeof(Queue));
 	queue->state = state; //0 NEW; 1 READY; 2 RUNNING; 3 FINISHED
 	queue -> count = 0;
 	queue -> head = NULL;
-	queue -> tail = NULL;	
+	queue -> tail = NULL;
+	queue -> priority = priority;	
 	return queue;
 }
+
+// Queues* queues_init(){
+// 	Queues* queues = malloc(sizeof(Queues));
+// 	queues -> count = 0;
+// 	queues -> head = NULL;
+// 	queues -> tail = NULL;
+// 	return queues;
+// }
+
 //
 
 Burst* burst_init(int time){
@@ -58,6 +76,33 @@ void burst_insert(Bursts* bursts, Burst* new){
 	}
 	bursts -> count++;	
 }
+
+void remove_burst(Process*process){
+	process->bursts->head = process->bursts->head->next_burst;
+	process->bursts->count -= 1;
+}
+
+void remove_process(Queue* queue){
+	queue->  head = queue -> head -> next_process;
+	queue -> count -= 1;
+}
+
+void move_process(Queue* queue){
+	if (queue->count > 1){
+		Process* moved_process = queue -> head;
+		queue-> head = queue -> head -> next_process;
+		queue-> tail -> next_process = moved_process;
+		queue-> tail = moved_process;
+		queue -> tail -> next_process = NULL;
+	}
+}
+
+void insert_process(Queue* queue, Process* process){
+	process -> next_process = NULL;
+	queue -> tail -> next_process = process;
+	queue -> tail = process;
+}
+
 
 void new_queue_insert(Queue* queue, Process* process){
 	if(queue -> count == 0){
@@ -101,6 +146,35 @@ void new_queue_insert(Queue* queue, Process* process){
 	queue -> count++;	
 }
 
+void finished_queue_insert(Queue* queue, Process* process){
+	if(queue -> count == 0)
+	{
+		queue -> tail = process;
+		queue -> head = process;
+	}
+	else
+	{
+		queue -> tail -> next_finished = process;      
+		queue -> tail = process;                               
+		queue -> tail -> next_finished = NULL;
+	}
+	queue -> count++;
+}
+
+void queues_insert(Queue* queue, Process* process){
+	if(queue -> count == 0)
+	{
+		queue -> tail = process;
+		queue -> head = process;
+	}
+	else
+	{
+		queue -> tail -> next_process = process;            //el siguiente del ultimo actual es new
+		queue -> tail = process;                                //se agrega new al final
+		queue -> tail -> next_process = NULL;
+	}
+	queue -> count++;
+}
 
 //
 // void buscar_vecinos(Image* map, Node* node){

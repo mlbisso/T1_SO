@@ -18,8 +18,23 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	Queue* new_queue = queue_init(0);
+	int quantum = atoi(argv[3]);
+	int total_processes = 0;
 
+	//creacion cola de todos los procesos, ordenados por tiempo de llegada
+	Queue* new_queue = queue_init(0, -1);
+
+	//creacion de cola de procesos terminados
+	Queue* finished_queue = queue_init(3, -1);
+
+
+	//creacion del sistema de todas las colas de MLFQ
+	int Q = atoi(argv[4]);  //numero de colas
+	Queue* queues[Q];
+	for (int i = 0; i < Q; i++){
+		Queue* ready_queue = queue_init(1, i);
+		queues[i] = ready_queue;
+	}
 
 	//LECTURA ARCHIVO Y CREACION PROCESOS
 	int PID = 0;
@@ -34,11 +49,12 @@ int main(int argc, char *argv[])
 	while ((read = getline(&line, &len, fr)) != -1) {
 		int i;
 		Process* process = process_init(PID);
+		total_processes += 1;
 		PID ++;
 		p = strtok(line, " ");
 	    if(p)
 	    {
-	    	*process->name = p;
+	    	strcpy(process->name, p);
 	    }
 	    p = strtok(NULL, " ");
 	    if(p){
@@ -68,6 +84,72 @@ int main(int argc, char *argv[])
 	// printf("hola\n");
 	// printf("%d\n", new_queue->head->PID);
 	// printf("%d\n", new_queue->tail->PID);
+
+	//INICIO SIMULACION
+	int T = 0;         //tiempo de simulacion
+	while(finished_queue->count != total_processes){
+		printf("\n");
+		printf("TIEMPO ACTUAL: %d\n", T);
+		if (new_queue -> count != 0 && T == new_queue ->head -> init_time){     //si un proceso es creado
+			printf("%s creado\n", new_queue -> head -> name);
+			printf("%s en estado READY\n", new_queue -> head -> name);
+			queues_insert(queues[Q - 1], new_queue-> head);   //se agrega a la primera cola si es tiempo de llegar
+			new_queue -> head = new_queue -> head -> next_new;   //se cambia el head de los procesos por llegar
+			// printf("%d\n", new_queue -> head -> PID);
+			new_queue -> count -= 1;
+			if (new_queue -> count != 0){
+				new_queue -> head -> previous_new = NULL;
+			}
+
+		}
+		for (int i = Q - 1; i >= 0; i--){         //busca en todas las colas de MLFQ para disminuir el tiempo de 1° proceso que encuentre
+			if (queues[i] -> head != NULL){       //si encuentro un proceso
+				if (queues[i] -> head -> processed_time == 0){   //quiere decir que Scheduler elige ese proceso
+					printf("%s elegido para ejecutar en CPU\n", queues[i] -> head -> name);
+					printf("%s cambia a estado RUNNING\n", queues[i] -> head -> name);
+					queues[i] -> head -> number_CPU += 1;
+					if (queues[i] -> head -> response_time == 0){            //para obtener response_time
+						queues[i]->head->response_time = T - queues[i]->head->init_time; 
+					}
+				}
+				queues[i] -> head -> bursts -> head -> time -= 1;    //le bajo el tiempo en 1 
+				if (queues[i] -> head -> bursts -> head -> time == 0){    //si se terminó una ´ráfaga
+					remove_burst(queues[i] -> head);    //saco la rafaga
+					queues[i] -> head ->processed_time = 0;    //para quantum de cada proceso
+					if (queues[i] -> head -> bursts ->count == 0){   //si no quedan rafagas en el proceso
+						printf("%s cambia a estado FINISHED\n", queues[i]->head->name);
+						printf("%s termina\n", queues[i]->head->name);
+						queues[i]->head->turnaround_time = T - queues[i]->head->init_time; 
+						finished_queue_insert(finished_queue, queues[i] -> head);     //se termino el proceso
+						remove_process(queues[i]);
+					}
+					else{                              //si quedan rafagas, muevo al final de la cola
+						printf("%s cambia a estado READY\n", queues[i]->head->name);
+						move_process(queues[i]);
+					}
+					break;
+				}
+				queues[i] -> head -> processed_time += 1;
+				if (queues[i] -> head -> processed_time == quantum ){   //quiere decir que hay que bajar de prioridad el proceso
+					printf("%s cambia a estado READY\n", queues[i]->head->name);
+					queues[i]->head->number_interruptions += 1;					
+					if (i != 0){                                       //bajo de cola
+						printf("%s baja a prioridad %d\n", queues[i]->head->name, i-1);					
+						Process* proceso_cambiado =  queues[i] -> head; 
+						proceso_cambiado-> processed_time = 0;
+						insert_process(queues[i - 1], proceso_cambiado);
+						remove_process(queues[i]);						
+					}
+					else{                                //RR
+						move_process(queues[i]);
+					}
+				}
+				break;
+			}
+		}
+		T += 1;
+	}
+
 
 	//
 	// /* Las rutas a los distintos archivos */
