@@ -91,6 +91,7 @@ void remove_process(Queue* queue);
 void move_process(Queue* queue);
 void insert_process(Queue* queue, Process* process);
 void finished_queue_insert(Queue* queue, Process* process);
+void finished_remove_process(Queue* queue);
 
 
 

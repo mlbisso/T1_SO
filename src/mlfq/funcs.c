@@ -20,9 +20,9 @@ Process* process_init(int PID)
 	process->processed_time = 0;
 	process->number_CPU = 0;
 	process->number_interruptions = 0;
-	process->turnaround_time = 0;
-    process->response_time = 0;
-    process->waiting_time = 0;
+	process->turnaround_time = -1;
+    process->response_time = -1;
+    process->waiting_time = -1;
 	return process;
 }
 
@@ -87,6 +87,12 @@ void remove_process(Queue* queue){
 	queue -> count -= 1;
 }
 
+void finished_remove_process(Queue* queue){
+	queue->  head = queue -> head -> next_finished;
+	queue -> count -= 1;
+}
+
+
 void move_process(Queue* queue){
 	if (queue->count > 1){
 		Process* moved_process = queue -> head;
@@ -98,9 +104,18 @@ void move_process(Queue* queue){
 }
 
 void insert_process(Queue* queue, Process* process){
-	process -> next_process = NULL;
-	queue -> tail -> next_process = process;
-	queue -> tail = process;
+	if(queue -> count == 0)
+	{
+		queue -> tail = process;
+		queue -> head = process;
+	}
+	else
+	{
+		queue -> tail -> next_process = process;      
+		queue -> tail = process;                               
+		queue -> tail -> next_process= NULL;
+	}
+	queue -> count++;
 }
 
 

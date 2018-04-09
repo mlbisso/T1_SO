@@ -1,0 +1,24 @@
+Procesos terminados: 3
+Tiempo total: 45
+
+PROCESS0:
+Turnos de CPU: 4
+Bloqueos: 1
+Turnaround time: 24
+Response time: 0
+Waiting time: -1
+
+PROCESS1:
+Turnos de CPU: 4
+Bloqueos: 1
+Turnaround time: 25
+Response time: 1
+Waiting time: -1
+
+PROCESS2:
+Turnos de CPU: 4
+Bloqueos: 4
+Turnaround time: 30
+Response time: 7
+Waiting time: -1
+

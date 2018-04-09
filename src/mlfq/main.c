@@ -75,6 +75,8 @@ int main(int argc, char *argv[])
 	}
 	fclose(fr);
 
+	// Queue* real_finished[total_processes];
+
 	//PARA PROBAR NEW_QUEUE
 	// Process* actual = new_queue->head;
 	// while (actual){
@@ -100,16 +102,21 @@ int main(int argc, char *argv[])
 			if (new_queue -> count != 0){
 				new_queue -> head -> previous_new = NULL;
 			}
-
 		}
 		for (int i = Q - 1; i >= 0; i--){         //busca en todas las colas de MLFQ para disminuir el tiempo de 1° proceso que encuentre
 			if (queues[i] -> head != NULL){       //si encuentro un proceso
+				// if (T == 15){
+				// 	printf("i=%d\n", i);
+				// 	printf("%s\n", queues[i] -> head->name);
+				// }
 				if (queues[i] -> head -> processed_time == 0){   //quiere decir que Scheduler elige ese proceso
 					printf("%s elegido para ejecutar en CPU\n", queues[i] -> head -> name);
 					printf("%s cambia a estado RUNNING\n", queues[i] -> head -> name);
 					queues[i] -> head -> number_CPU += 1;
-					if (queues[i] -> head -> response_time == 0){            //para obtener response_time
+					if (queues[i] -> head -> response_time == -1){            //para obtener response_time
 						queues[i]->head->response_time = T - queues[i]->head->init_time; 
+						printf("T %d\n", T);
+						printf("N %d\n", queues[i]->head->init_time);
 					}
 				}
 				queues[i] -> head -> bursts -> head -> time -= 1;    //le bajo el tiempo en 1 
@@ -121,6 +128,8 @@ int main(int argc, char *argv[])
 						printf("%s termina\n", queues[i]->head->name);
 						queues[i]->head->turnaround_time = T - queues[i]->head->init_time; 
 						finished_queue_insert(finished_queue, queues[i] -> head);     //se termino el proceso
+						//real_finished[] TODO TODO TODO
+						// printf("queue: %s\n", finished_queue->tail->name);
 						remove_process(queues[i]);
 					}
 					else{                              //si quedan rafagas, muevo al final de la cola
@@ -129,7 +138,7 @@ int main(int argc, char *argv[])
 					}
 					break;
 				}
-				queues[i] -> head -> processed_time += 1;
+				// queues[i] -> head -> processed_time += 1;
 				if (queues[i] -> head -> processed_time == quantum ){   //quiere decir que hay que bajar de prioridad el proceso
 					printf("%s cambia a estado READY\n", queues[i]->head->name);
 					queues[i]->head->number_interruptions += 1;					
@@ -137,18 +146,49 @@ int main(int argc, char *argv[])
 						printf("%s baja a prioridad %d\n", queues[i]->head->name, i-1);					
 						Process* proceso_cambiado =  queues[i] -> head; 
 						proceso_cambiado-> processed_time = 0;
+						// if (T!=7){
+						// printf("ii %s\n", queues[i]->head->next_process->name);												
+						// }	
+						remove_process(queues[i]);
 						insert_process(queues[i - 1], proceso_cambiado);
-						remove_process(queues[i]);						
+						// if (T!=7){
+						// printf("aa %s\n", queues[i]->tail->name);												
+						// }	
 					}
 					else{                                //RR
 						move_process(queues[i]);
 					}
 				}
+				else{
+					queues[i] -> head -> processed_time += 1;
+				}
 				break;
 			}
 		}
 		T += 1;
+		// if (queues[Q-1] -> head != NULL){
+		// 	printf("tail: %s\n", queues[Q-1] -> head->name);
+		// }
+		// if (T == 45){   //TODO borrar
+		// 	break;
+		// }
 	}
+
+	//ESCRIBIR INFO EN ARCHIVO
+	FILE *f = fopen("result.txt", "w");   //TODO cambiar nombre archivo
+	fprintf(f, "Procesos terminados: %d\n", finished_queue->count);
+	fprintf(f, "Tiempo total: %d\n\n", T);
+	int total = finished_queue->count;	
+	for(int i = 0; i < total; i++){
+	 	  fprintf(f, "%s:\n", finished_queue->head->name);
+	 	  fprintf(f, "Turnos de CPU: %d\n", finished_queue->head->number_CPU);
+	 	  fprintf(f, "Bloqueos: %d\n", finished_queue->head->number_interruptions);
+	 	  fprintf(f, "Turnaround time: %d\n", finished_queue->head->turnaround_time);
+	 	  fprintf(f, "Response time: %d\n", finished_queue->head->response_time);
+	 	  fprintf(f, "Waiting time: %d\n\n", finished_queue->head->waiting_time);
+	 	  finished_remove_process(finished_queue);
+	}
+	fclose(f);
 
 
 	//
