@@ -46,6 +46,7 @@ struct process
   int turnaround_time;
   int response_time;
   int waiting_time;
+  int in_cpu;
 };
 
 struct queue;
@@ -92,7 +93,7 @@ void move_process(Queue* queue);
 void insert_process(Queue* queue, Process* process);
 void finished_queue_insert(Queue* queue, Process* process);
 void finished_remove_process(Queue* queue);
-
+Process* get_process(Queue* queue, int actual_PID);
 
 
 // void buscar_vecinos(Image* map, Node* node);

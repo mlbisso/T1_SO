@@ -23,6 +23,7 @@ Process* process_init(int PID)
 	process->turnaround_time = -1;
     process->response_time = -1;
     process->waiting_time = -1;
+    process->in_cpu = 0;
 	return process;
 }
 
@@ -116,6 +117,14 @@ void insert_process(Queue* queue, Process* process){
 		queue -> tail -> next_process= NULL;
 	}
 	queue -> count++;
+}
+
+Process* get_process(Queue* queue, int actual_PID){
+	Process* return_process = queue->head;
+	while (return_process != NULL && return_process -> PID != actual_PID){
+		return_process = return_process->next_process;
+	}
+	return return_process;
 }
 
 
