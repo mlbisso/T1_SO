@@ -21,14 +21,18 @@ int main(int argc, char *argv[])
 	int quantum = atoi(argv[3]);
 	int total_processes = 0;
 
+	int S = 1000000;
+	int S_aux = 0;
+
+	if (strcmp(argv[1], "v1") != 0){
+		S = atoi(argv[5]);
+	}
+
 	//creacion cola de todos los procesos, ordenados por tiempo de llegada
 	Queue* new_queue = queue_init(0, -1);
 
 	//creacion de cola de procesos terminados
 	Queue* finished_queue = queue_init(3, -1);
-
-	Process* actual_process = NULL;
-	Process* to_change_process = NULL;
 
 	//creacion del sistema de todas las colas de MLFQ
 	int Q = atoi(argv[4]);  //numero de colas
@@ -39,68 +43,45 @@ int main(int argc, char *argv[])
 	}
 
 	//LECTURA ARCHIVO Y CREACION PROCESOS
-	int PID = 0;
-    char *p;
-	FILE* fr = fopen(argv[2], "r");
-	char *line = NULL;
-	size_t len = 0;
-	ssize_t read;
-  	if (fr == NULL){
-    	return 2;
-	}
-	while ((read = getline(&line, &len, fr)) != -1) {
-		int i;
-		Process* process = process_init(PID);
-		total_processes += 1;
-		PID ++;
-		p = strtok(line, " ");
-	    if(p)
-	    {
-	    	strcpy(process->name, p);
-	    }
-	    p = strtok(NULL, " ");
-	    if(p){
-	    	process->init_time = atoi(p);
-	    }
-	    p = strtok(NULL, " ");
-	    int limit = atoi(p);
-	   	if(p){
-	    	for (i = 0; i < limit; i++){
-	    		p = strtok(NULL, " ");
-	    		if (p){
-	    			Burst* burst = burst_init(atoi(p));
-	    			burst_insert(process->bursts, burst);
-	    		}
-	    	}
-	    }
-	    new_queue_insert(new_queue, process);
-	}
-	fclose(fr);
-
-	// Queue* real_finished[total_processes];
-
-	//PARA PROBAR NEW_QUEUE
-	// Process* actual = new_queue->head;
-	// while (actual){
-	// 	printf("%d\n", actual ->init_time);
-	// 	actual = actual -> next_new;
-	// }
-	// printf("hola\n");
-	// printf("%d\n", new_queue->head->PID);
-	// printf("%d\n", new_queue->tail->PID);
+	total_processes = reading_file(argv[2], new_queue, total_processes);
 
 	//INICIO SIMULACION
 	int T = 0;         //tiempo de simulacion
 	while(finished_queue->count != total_processes){
 		printf("\n");
 		printf("TIEMPO ACTUAL: %d\n", T);
+			for (int i = Q - 1; i >= 0; i--){
+				if (queues[i] -> head != NULL){       //si encuentro un proceso
+					Process* actual = queues[i] -> head;
+					while(actual != NULL){
+						printf("proceso %s\n", actual->name);
+						actual = actual -> next_process;
+					}
+				}
+			}
+		if (S == S_aux){
+			S_aux = 0;
+			for (int i = 0; i <= Q - 1; i++){         //busca en todas las colas de MLFQ para disminuir el tiempo de 1° proceso que encuentre
+				if (queues[i]->head == NULL){
+					continue;
+				}	
+				else{
+					if (i == Q - 1){
+						break;
+					}
+					else{
+						queues[i+1] = unir_queues(queues[i], queues[i+1]);
+						queues[i] = queue_init(1,i);
+					}
+				}
+			}
+		}
 		if (new_queue -> count != 0 && T == new_queue ->head -> init_time){     //si un proceso es creado
 			printf("%s creado\n", new_queue -> head -> name);
 			printf("%s en estado READY\n", new_queue -> head -> name);
 			new_queue -> head -> state = 1;
 			queues_insert(queues[Q - 1], new_queue-> head);   //se agrega a la primera cola si es tiempo de llegar
 			new_queue -> head = new_queue -> head -> next_new;   //se cambia el head de los procesos por llegar
-			// printf("%d\n", new_queue -> head -> PID);
 			new_queue -> count -= 1;
 			if (new_queue -> count != 0){
 				new_queue -> head -> previous_new = NULL;
@@ -108,101 +89,91 @@ int main(int argc, char *argv[])
 		}
 		for (int i = Q - 1; i >= 0; i--){         //busca en todas las colas de MLFQ para disminuir el tiempo de 1° proceso que encuentre
 			if (queues[i] -> head != NULL){       //si encuentro un proceso
-				if (actual_process != NULL){
-					to_change_process = get_process(queues[i], actual_process->PID);
-					if (to_change_process == NULL){
+				if (strcmp(argv[1], "v1") != 0){
+					if (revision_finished(finished_queue, queues[i]->head) == 1){
 						continue;
-					}			
-				}
-				else{
-					to_change_process = queues[i] -> head;
-					// actual_process = queues[i] -> head;
-				}
-				// if (T == 15){
-				// 	printf("i=%d\n", i);
-				// 	printf("%s\n", queues[i] -> head->name);
-				// }
-				if (to_change_process -> processed_time == 0 && to_change_process -> state == 1){   //quiere decir que Scheduler elige ese proceso
-					printf("%s elegido para ejecutar en CPU\n", to_change_process -> name);
-					printf("%s cambia a estado RUNNING\n", to_change_process -> name);
-					to_change_process -> state = 2;
-					to_change_process -> number_CPU += 1;
-					actual_process = to_change_process;
-					if (to_change_process -> response_time == -1){            //para obtener response_time
-						queues[i]->head->response_time = T - queues[i]->head->init_time; 
-						printf("T %d\n", T);
-						printf("N %d\n", queues[i]->head->init_time);
+					}
+				}				
+				if ((queues[i] -> head -> state == 1)){   //quiere decir que Scheduler elige ese proceso
+					printf("%s elegido para ejecutar en CPU\n", queues[i] -> head -> name);
+					printf("%s cambia a estado RUNNING\n", queues[i] -> head -> name);
+					queues[i] -> head -> state = 2;
+					queues[i] -> head -> number_CPU += 1;
+					if (queues[i] -> head -> response_time == -1){            //para obtener response_time
+						queues[i] -> head->response_time = T - queues[i] -> head->init_time; 
 					}
 				}
-				// queues[i] -> head -> bursts -> head -> time -= 1;    //le bajo el tiempo en 1 
-				// queues[i] -> head -> processed_time += 1;
-				if (to_change_process -> bursts -> head -> time == 0){    //si se terminó una ´ráfaga
-					remove_burst(to_change_process);    //saco la rafaga
+				if (queues[i] -> head -> bursts -> head == NULL){
+					printf("%s\n", queues[i] -> head->name);
+				}
+				if (queues[i] -> head -> bursts -> head -> time == 0){    //si se terminó una ´ráfaga
+					remove_burst(queues[i] -> head);    //saco la rafaga
 
-					printf("process %s bursts: %d\n", to_change_process-> name, to_change_process->bursts->count);
-					to_change_process ->processed_time = 0;    //para quantum de cada proceso
-					if (to_change_process -> bursts ->count == 0){   //si no quedan rafagas en el proceso
-						printf("%s cambia a estado FINISHED\n", queues[i]->head->name);
-						to_change_process -> state = 3;
-						actual_process = NULL;
-						printf("%s termina\n", queues[i]->head->name);
-						printf("%d in_cpu\n", queues[i]->head->in_cpu);
-						queues[i]->head->turnaround_time = T - queues[i]->head->init_time; 
-						finished_queue_insert(finished_queue, to_change_process);     //se termino el proceso
-						//real_finished[] TODO TODO TODO
-						// printf("queue: %s\n", finished_queue->tail->name);
+					printf("process %s bursts: %d\n", queues[i] -> head-> name, queues[i] -> head->bursts->count);
+					// queues[i] -> head ->processed_time = 0;    //para quantum de cada proceso
+					if (queues[i] -> head -> bursts ->count == 0){   //si no quedan rafagas en el proceso
+						printf("%s cambia a estado FINISHED\n", queues[i] -> head->name);
+						queues[i] -> head -> state = 3;
+						printf("%s termina\n", queues[i] -> head->name);
+						queues[i] -> head->turnaround_time = T - queues[i] -> head->init_time; 
+						finished_queue_insert(finished_queue, queues[i] -> head);     //se termino el proceso
 						remove_process(queues[i]);
 					}
 					else{                              //si quedan rafagas, muevo al final de la cola
-						printf("%s cambia a estado READYb\n", queues[i]->head->name);
-						actual_process = NULL;
-						to_change_process -> state = 1;
-						move_process(queues[i]);
+						printf("%s cambia a estado READY\n", queues[i] -> head->name);
+						queues[i] -> head -> state = 1;
+						if (queues[i] -> head -> processed_time == quantum){     //si justo hay problemas con quantum
+							queues[i] -> head->number_interruptions += 1;	
+							if (i != 0){                                       //bajo de cola
+								printf("%s baja a prioridad %d\n", queues[i] -> head->name, i-1);					
+								Process* proceso_cambiado =  queues[i] -> head; 
+								proceso_cambiado-> processed_time = 0;	
+								remove_process(queues[i]);
+								insert_process(queues[i - 1], proceso_cambiado);	
+							}
+							else{                                //RR
+								queues[i]->  head-> processed_time = 0;				
+								move_process(queues[i]);
+					    	}
+						}
+						else{
+							move_process(queues[i]);
+						}
 					}
 					T -= 1;
+					S_aux -= 1;
 					break;
 				}
-				if (to_change_process -> processed_time == quantum ){   //quiere decir que hay que bajar de prioridad el proceso
-					printf("%s cambia a estado READYa\n", queues[i]->head->name);
-					actual_process = NULL;
-					to_change_process -> state = 1;
-					queues[i]->head->number_interruptions += 1;	
+				if (queues[i] -> head -> processed_time == quantum ){   //quiere decir que hay que bajar de prioridad el proceso
+					printf("%s cambia a estado READY\n", queues[i] -> head->name);
+					queues[i] -> head -> state = 1;
+					queues[i] -> head->number_interruptions += 1;	
 					if (i != 0){                                       //bajo de cola
-						printf("%s baja a prioridad %d\n", queues[i]->head->name, i-1);					
-						Process* proceso_cambiado =  to_change_process; 
-						proceso_cambiado-> processed_time = 0;
-						// if (T!=7){
-						// printf("ii %s\n", queues[i]->head->next_process->name);												
-						// }	
+						printf("%s baja a prioridad %d\n", queues[i] -> head->name, i-1);					
+						Process* proceso_cambiado =  queues[i] -> head; 
+						proceso_cambiado-> processed_time = 0;	
 						remove_process(queues[i]);
-						insert_process(queues[i - 1], proceso_cambiado);
-						// if (T!=7){
-						// printf("aa %s\n", queues[i]->tail->name);												
-						// }	
+						insert_process(queues[i - 1], proceso_cambiado);	
 					}
 					else{                                //RR
-						printf("RR\n");
 						queues[i]->  head-> processed_time = 0;				
 						move_process(queues[i]);
 					}
 					T -= 1;
+					S_aux -= 1;
 					break;
 				}
-				// else{
-				// 	queues[i] -> head -> processed_time += 1;
-				// }
-				to_change_process -> bursts -> head -> time -= 1;    //le bajo el tiempo en 1 
-				to_change_process -> processed_time += 1;
-				to_change_process -> in_cpu += 1;
-				printf("revisar : %d\n", to_change_process -> bursts -> head -> time);
+				queues[i] -> head -> bursts -> head -> time -= 1;    //le bajo el tiempo en 1 
+				queues[i] -> head -> processed_time += 1;
+				queues[i] -> head -> in_cpu += 1;
 				break;
 			}
 		}
 		T += 1;
-
-		// if (queues[Q-1] -> head != NULL){
-		// 	printf("tail: %s\n", queues[Q-1] -> head->name);
-		// }
+		S_aux += 1;
+		for (int i = Q - 1; i >= 0; i--){   //para obtener los readys
+			recorrer_ready(queues[i]);
+		}
 	}
 
 	//ESCRIBIR INFO EN ARCHIVO
@@ -220,72 +191,5 @@ int main(int argc, char *argv[])
 	 	  finished_remove_process(finished_queue);
 	}
 	fclose(f);
-
-
-	//
-	// /* Las rutas a los distintos archivos */
-	// char* map_filepath = argv[1];
-	// char* query_filepath = argv[2];
-	// char* graph_filepath = argv[3];
-	// char* route_filepath = argv[4];
-	//
-	// /** Lee la imagen */
-	// Image* map = img_png_read_from_file(map_filepath);
-	// // watcher_open(map_filepath);
-	//
-	// /** Cantidad de núcleos */
-	// int nuclei_count = 0;
-	// for(int row = 0; row < map -> height; row++){
-	// 	for(int col = 0; col < map -> width; col++){
-	// 		/* Si es 0 es negro */
-	// 		if(map -> pixels[row][col] == 0)
-	// 		{
-	// 			/* Encontramos un núcleo! */
-	// 			// printf("El pixel (%d,%d) corresponde a un núcleo\n", col, row);
-	// 			nuclei_count++;
-	// 		}
-	// 	}
-	// }
-	//
-	// Node V[nuclei_count + 1];
-	// //inicializacion
-	// for(int i = 0; i < nuclei_count + 1; i++){
-	// 	V[i] = *node_init(0, 0, 0, nuclei_count);
-	// }
-	//
-	// for(int row = 0; row < map -> height; row++){
-	// 	for(int col = 0; col < map -> width; col++){
-	// 		/* Si es 0 es negro */
-	// 		if(map -> pixels[row][col] == 0)
-	// 		{
-	// 			/* Encontramos un núcleo! */
-	// 			// printf("El pixel (%d,%d) corresponde a un núcleo\n", col, row);
-	// 			int id = 0;
-	// 			if (row != 0){
-	// 				id = map -> pixels[row - 1][col];
-	// 			}
-	// 			else{
-	// 				id = map -> pixels[row + 1][col];
-	// 			}
-	// 			Node* node = node_init(id, row, col, nuclei_count);
-	// 			buscar_vecinos(map, node);
-	// 			V[id] = *node;
-	// 		}
-	// 	}
-	// }
-	//
-	// // Node* puntero = V;
-	// //dfs(puntero, V, nuclei_count);
-	// // crear_grafo(puntero, V, nuclei_count);
-	//
-	// escribir_grafo(V, nuclei_count, graph_filepath);
-	//
-	// FW(V, nuclei_count, query_filepath, route_filepath);
-	// // printf("En total son %d células\n", nuclei_count);
-	//
-	// /* Libera la imagen */
-	// img_png_destroy(map);
-	// // usleep(150000);
-	// // watcher_close();
 	return 0;
 }

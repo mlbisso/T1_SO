@@ -61,18 +61,7 @@ struct queue
 	int priority;
 };
 
-// struct queues;
-// typedef struct queues Queues;        //sirve para guardar todas las colas
 
-// struct queues
-// {
-// 	Queue* head;
-// 	Queue* tail;
-// 	int count;
-// };
-
-//
-//
 // /****************************************************************************/
 // /*                               Funciones                                  */
 // /****************************************************************************/
@@ -81,8 +70,6 @@ Process* process_init(int PID);
 Burst* burst_init();
 Bursts* bursts_init();
 Queue* queue_init(int state, int priority);
-// Queues* queues_init();
-
 
 void burst_insert(Bursts* bursts, Burst* burst);
 void new_queue_insert(Queue* queue, Process* process);
@@ -94,15 +81,10 @@ void insert_process(Queue* queue, Process* process);
 void finished_queue_insert(Queue* queue, Process* process);
 void finished_remove_process(Queue* queue);
 Process* get_process(Queue* queue, int actual_PID);
+void recorrer_ready(Queue* queue);
 
+int reading_file(char* file, Queue* new_queue, int total_processes);
 
-// void buscar_vecinos(Image* map, Node* node);
-// void dfs(Node *puntero, Node* v, int nuclei_count);
-// int dfsVisit(Node* u, int tiempo, Node* V, int nuclei_count);
-//
-// void crear_grafo(Node *puntero, Node* v, int nuclei_count);
-// void escribir_grafo(Node* V, int nuclei_count, char* graph_filepath);
-//
-// double calcular_distancia(int col_i, int row_i, int col_f, int row_f);
-// void FW(Node* V, int nuclei_count, char* query_filepath, char* route_filepath);
-// void node_insert(Ruta* ruta, Node* node);
+Queue* unir_queues(Queue* menor, Queue* mayor);
+
+int revision_finished(Queue* finished, Process* process);
